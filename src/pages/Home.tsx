@@ -8,7 +8,6 @@ import CartPanel from "@/components/CartPanel";
 import { useCart } from "@/hooks/useCart";
 import UserMenu from "@/components/UserMenu";
 
-
 type Category = {
   id: string | number;
   name: string;
@@ -58,7 +57,12 @@ export default function Home() {
     name: null,
     avatar: null,
   });
+
   const cart = useCart();
+
+  const updateBookStatus = (bookId: string | number, status: string) => {
+    setBooks((prev) => prev.map((b) => (String(b.id) === String(bookId) ? { ...b, status } : b)));
+  };
 
 
   useEffect(() => {
@@ -103,10 +107,17 @@ export default function Home() {
         toast.error("Este libro ya está en tu carrito");
       } else if (detail?.taken) {
         toast.error("Este libro ya fue seleccionado");
+
       } else if (detail?.ok) {
+        const raw = localStorage.getItem("pendingItem");
+        if (raw) {
+          const parsed = JSON.parse(raw) as { id: string | number; type: string };
+          updateBookStatus(parsed.id, "reserved");
+        }
         toast.success("Añadido al carrito");
         setCartOpen(true);
       }
+
     };
     window.addEventListener("cart:pending-processed", onPending);
     return () => {
@@ -338,6 +349,7 @@ export default function Home() {
                             } else if (res.taken) {
                               toast.error("Este libro ya fue seleccionado por otro invitado");
                             } else if (res.ok) {
+                              updateBookStatus(book.id, "reserved");
                               toast.success("Añadido al carrito");
                               setCartOpen(true);
                             }
