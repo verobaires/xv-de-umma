@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { X, Trash2 } from "lucide-react";
 import type { CartItem } from "@/hooks/useCart";
 
@@ -20,6 +20,7 @@ type Props = {
   totalEnabled: number;
   onToggle: (id: string | number, value: boolean) => void;
   onRemove: (id: string | number) => void;
+  onConfirm: (message: string | null) => void;
 };
 
 export default function CartPanel({
@@ -30,14 +31,37 @@ export default function CartPanel({
   totalEnabled,
   onToggle,
   onRemove,
+  onConfirm,
 }: Props) {
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageText, setMessageText] = useState("");
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      if (showMessageModal) {
+        setShowMessageModal(false);
+        return;
+      }
+      onClose();
     };
     if (open) document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, showMessageModal]);
+
+  const handleDeclineMessage = () => {
+    setShowMessageModal(false);
+    setMessageText("");
+    onConfirm(null);
+  };
+
+  const handleSendMessage = () => {
+    const trimmed = messageText.trim();
+    if (!trimmed) return;
+    setShowMessageModal(false);
+    setMessageText("");
+    onConfirm(trimmed);
+  };
 
   if (!open) return null;
 
@@ -60,7 +84,7 @@ export default function CartPanel({
         </div>
 
         {/* RIGHT — content */}
-        <div className="flex w-full md:w-1/2 h-full flex-col">
+        <div className="relative flex w-full md:w-1/2 h-full flex-col">
           {/* Header */}
           <div className="flex items-start justify-between p-6 border-b border-white/10">
             <div>
@@ -150,12 +174,57 @@ export default function CartPanel({
               </span>
             </div>
             <button
+              type="button"
               className="w-full rounded-lg bg-[#8B0000] px-6 py-3 text-sm font-semibold uppercase tracking-wider text-white hover:bg-[#a00000] transition-colors disabled:opacity-50"
               disabled={items.length === 0}
+              onClick={() => setShowMessageModal(true)}
             >
               Confirmar Pedido
             </button>
           </div>
+
+          {showMessageModal && (
+            <div
+              className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 p-6"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="gift-message-title"
+            >
+              <div className="w-full max-w-sm rounded-xl border border-[#B8860B]/30 bg-[#1A1A2E] p-6 mx-auto">
+                <h3
+                  id="gift-message-title"
+                  className="text-lg font-bold text-white"
+                  style={{ fontFamily: "var(--font-serif)" }}
+                >
+                  ¿Querés dejarle un mensaje a Umma con tu regalo?
+                </h3>
+                <textarea
+                  rows={4}
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  placeholder="Escribí tu mensaje aquí..."
+                  className="mt-4 w-full resize-none rounded-lg border border-white/20 bg-white/5 p-3 text-sm text-white placeholder:text-white/40 focus:border-[#B8860B] focus:outline-none"
+                />
+                <div className="mt-4 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={handleDeclineMessage}
+                    className="flex-1 rounded-lg border border-white bg-transparent px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                  >
+                    No, gracias
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSendMessage}
+                    disabled={!messageText.trim()}
+                    className="flex-1 rounded-lg bg-[#8B0000] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#a00000] disabled:opacity-50"
+                  >
+                    Enviar mensaje
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </aside>
     </div>

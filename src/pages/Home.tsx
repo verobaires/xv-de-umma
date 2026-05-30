@@ -419,6 +419,7 @@ export default function Home() {
         totalEnabled={cart.totalEnabled}
         onToggle={cart.toggleEnabled}
         onRemove={cart.removeItem}
+        onConfirm={() => {}}
       />
     </div>
   );
