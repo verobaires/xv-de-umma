@@ -35,6 +35,7 @@ export default function CartPanel({
 }: Props) {
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageText, setMessageText] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -49,10 +50,18 @@ export default function CartPanel({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose, showMessageModal]);
 
+  const runConfirm = async (message: string | null) => {
+    setLoading(true);
+    const result = await Promise.resolve(
+      onConfirm(message) as boolean | Promise<boolean> | void,
+    );
+    if (result === false) setLoading(false);
+  };
+
   const handleDeclineMessage = () => {
     setShowMessageModal(false);
     setMessageText("");
-    onConfirm(null);
+    void runConfirm(null);
   };
 
   const handleSendMessage = () => {
@@ -60,7 +69,7 @@ export default function CartPanel({
     if (!trimmed) return;
     setShowMessageModal(false);
     setMessageText("");
-    onConfirm(trimmed);
+    void runConfirm(trimmed);
   };
 
   if (!open) return null;
@@ -209,17 +218,18 @@ export default function CartPanel({
                   <button
                     type="button"
                     onClick={handleDeclineMessage}
-                    className="flex-1 rounded-lg border border-white bg-transparent px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                    disabled={loading}
+                    className="flex-1 rounded-lg border border-white bg-transparent px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10 disabled:opacity-50"
                   >
                     No, gracias
                   </button>
                   <button
                     type="button"
                     onClick={handleSendMessage}
-                    disabled={!messageText.trim()}
+                    disabled={loading || !messageText.trim()}
                     className="flex-1 rounded-lg bg-[#8B0000] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#a00000] disabled:opacity-50"
                   >
-                    Enviar mensaje
+                    {loading ? "Procesando..." : "Enviar mensaje"}
                   </button>
                 </div>
               </div>

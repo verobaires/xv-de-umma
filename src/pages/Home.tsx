@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, ShoppingCart, Star } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase, supabaseAnonKey } from "@/lib/supabaseClient";
 import LoginModal from "@/components/LoginModal";
 import CartPanel from "@/components/CartPanel";
 import { useCart } from "@/hooks/useCart";
@@ -64,6 +64,85 @@ export default function Home() {
     setBooks((prev) => prev.map((b) => (String(b.id) === String(bookId) ? { ...b, status } : b)));
   };
 
+  const handleConfirmOrder = async (message: string | null): Promise<boolean> => {
+    const enabledItems = cart.items.filter((i) => i.enabled === true);
+    if (enabledItems.length === 0 || !cart.userId) {
+      toast.error("No hay items seleccionados");
+      return false;
+    }
+
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .insert({
+        user_id: cart.userId,
+        total: cart.totalEnabled,
+        status: "pending",
+      })
+      .select("id")
+      .single();
+
+    if (orderError || !order?.id) {
+      toast.error("Error al crear el pedido");
+      return false;
+    }
+
+    const orderId = order.id;
+
+    const { error: itemsError } = await supabase.from("order_items").insert(
+      enabledItems.map((item) => ({
+        order_id: orderId,
+        item_id: item.item_id,
+        item_type: item.item_type,
+        price: item.price,
+      })),
+    );
+
+    if (itemsError) {
+      toast.error("Error al guardar los items");
+      return false;
+    }
+
+    if (message && message.trim()) {
+      const { error: msgError } = await supabase
+        .from("messages")
+        .insert({ order_id: orderId, message: message.trim() });
+      if (msgError) {
+        console.error(msgError);
+      }
+    }
+
+    try {
+      const response = await fetch(
+        "https://lyesyoofgicfezabtnns.supabase.co/functions/v1/create-mp-preference",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${supabaseAnonKey}`,
+          },
+          body: JSON.stringify({
+            order_id: orderId,
+            items: enabledItems.map((i) => ({ title: i.title, price: i.price })),
+          }),
+        },
+      );
+
+      const data = (await response.json()) as { init_point?: string };
+      const initPoint = data?.init_point;
+
+      if (!response.ok || !initPoint || !String(initPoint).trim()) {
+        toast.error("Error al conectar con Mercado Pago");
+        return false;
+      }
+
+      window.location.href = initPoint;
+      return true;
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al conectar con Mercado Pago");
+      return false;
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -419,7 +498,7 @@ export default function Home() {
         totalEnabled={cart.totalEnabled}
         onToggle={cart.toggleEnabled}
         onRemove={cart.removeItem}
-        onConfirm={() => {}}
+        onConfirm={handleConfirmOrder}
       />
     </div>
   );
