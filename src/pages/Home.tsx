@@ -218,13 +218,32 @@ export default function Home() {
       ]);
       if (cancelled) return;
       if (!cats.error && cats.data) setCategories(cats.data as Category[]);
-      if (!bks.error && Array.isArray(bks.data) && bks.data.length > 0) {
+      if (!bks.error && Array.isArray(bks.data)) {
         setBooks(bks.data as Book[]);
       }
     })();
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("status");
+
+    if (status === "approved") {
+      toast.success("¡Tu regalo fue registrado! Muchas gracias 💜", { duration: 4000 });
+    } else if (status === "failure") {
+      toast.error("Hubo un problema con el pago. Tu carrito sigue guardado.");
+    } else if (status === "pending") {
+      toast.error("Tu pago está pendiente de confirmación.");
+    }
+
+    history.replaceState({}, "", window.location.pathname);
+
+    if (status === "approved" || status === "failure" || status === "pending") {
+      setCartOpen(true);
+    }
   }, []);
 
   const filtered = useMemo(() => {
