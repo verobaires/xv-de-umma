@@ -230,20 +230,18 @@ export default function Home() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const status = params.get("status");
-
+    if (!status) return;
     if (status === "approved") {
       toast.success("¡Tu regalo fue registrado! Muchas gracias 💜", { duration: 4000 });
+      setCartOpen(true);
     } else if (status === "failure") {
       toast.error("Hubo un problema con el pago. Tu carrito sigue guardado.");
+      setCartOpen(true);
     } else if (status === "pending") {
       toast.error("Tu pago está pendiente de confirmación.");
-    }
-
-    history.replaceState({}, "", window.location.pathname);
-
-    if (status === "approved" || status === "failure" || status === "pending") {
       setCartOpen(true);
     }
+    history.replaceState({}, "", window.location.pathname);
   }, []);
 
   const filtered = useMemo(() => {
