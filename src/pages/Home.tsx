@@ -280,6 +280,16 @@ export default function Home() {
   const paidCount = books.filter((b) => b.status === "paid").length;
   const progressPct = Math.min(100, Math.max(0, (paidCount / 15) * 100));
 
+  function getProgressMessage(paid: number): string {
+    if (paid === 0) return "¡Sumate y ayudá a cumplir el sueño de Umma!";
+    if (paid < 4) return `¡Empezamos! Cada libro cuenta 📚`;
+    if (paid < 8) return `¡Muy bien! Ya van ${paid} libros camino a los 15`;
+    if (paid === 8) return "¡Llegamos a la mitad! Ya somos la mitad del camino 🌟";
+    if (paid < 12) return `¡Casi! Faltan solo ${15 - paid} libros para el sueño completo`;
+    if (paid < 15) return `¡Falta poquito! ${15 - paid} libro${15 - paid === 1 ? "" : "s"} más y llegamos 💫`;
+    return "¡Llegamos a los 15 libros! Pero hay más en la lista si querés sumar a su biblioteca 🎉";
+  }
+
   return (
     <div className="min-h-screen bg-[#1A1A2E] text-white">
       {/* HEADER */}
@@ -337,9 +347,17 @@ export default function Home() {
         </div>
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-black/60" />
         <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
-          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.35em] text-[#B8860B] sm:text-xs">
+          <h3
+            className="mb-3 text-[10px] font-semibold uppercase tracking-[0.35em] text-[#B8860B] sm:text-xs inline-block rounded-md px-4 py-2"
+            style={{
+              backdropFilter: "blur(4px)",
+              backgroundColor: "rgba(0,0,0,0.45)",
+              textShadow: "0 1px 6px rgba(0,0,0,0.9)",
+              boxShadow: "0 0 0 1px rgba(184,134,11,0.15)",
+            }}
+          >
             Regalale a Umma nuevas historias para sus 15
-          </p>
+          </h3>
           <h1
             className="text-4xl font-bold leading-tight text-white sm:text-6xl"
             style={{ fontFamily: "var(--font-serif)" }}
@@ -393,20 +411,19 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="w-full bg-[#1A1A2E]">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-white/50">Regalos confirmados</span>
-            <span className="text-xs font-bold text-[#B8860B]">
-              {paidCount} de 15
-            </span>
+      <section className="w-full bg-[#1A1A2E] border-b border-white/5">
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-sm font-bold text-white">Regalos confirmados</span>
+            <span className="text-sm font-bold text-[#B8860B]">{paidCount} de 15</span>
           </div>
-          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10">
+          <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-white/10">
             <div
-              className="h-full min-w-0 max-w-full rounded-full bg-[#B8860B] transition-all duration-500"
+              className="h-full min-w-0 max-w-full rounded-full bg-[#B8860B] transition-all duration-700"
               style={{ width: `${progressPct}%` }}
             />
           </div>
+          <p className="mt-2 text-xs text-white/60 italic">{getProgressMessage(paidCount)}</p>
         </div>
       </section>
 
@@ -516,9 +533,7 @@ export default function Home() {
                       {book.title}
                     </h3>
                     {book.author && (
-                      <p className="text-xs italic text-white/50 mt-0.5">
-                        {book.author}
-                      </p>
+                      <p className="mt-0.5 text-xs italic text-white/50">{book.author}</p>
                     )}
                     <p className="mt-2 text-sm font-bold text-[#B8860B]">
                       {formatPrice(book.price)}
