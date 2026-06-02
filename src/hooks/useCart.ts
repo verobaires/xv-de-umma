@@ -232,18 +232,22 @@ export function useCart() {
 
   const removeItem = useCallback(
     async (id: string | number) => {
-      // Find the item to know which table to revert
       const target = items.find((i) => String(i.id) === String(id));
       await supabase.from("cart_items").delete().eq("id", id);
       if (target) {
         const table = target.item_type === "book" ? "books" : "gifts";
-        await supabase
+        const { data: current } = await supabase
           .from(table)
-          .update({ status: "available", reserved_by: null, reserved_at: null })
+          .select("status")
           .eq("id", target.item_id)
-          .eq("reserved_by", userId);
+          .maybeSingle();
+        if (current?.status === "reserved") {
+          await supabase
+            .from(table)
+            .update({ status: "available", reserved_by: null, reserved_at: null })
+            .eq("id", target.item_id);
+        }
       }
-      // If cart becomes empty, mark/delete the cart record
       if (cartId) {
         const { data: remaining } = await supabase
           .from("cart_items")
@@ -259,7 +263,7 @@ export function useCart() {
       }
       await refresh();
     },
-    [refresh, items, userId, cartId],
+    [refresh, items, cartId],
   );
 
   const toggleEnabled = useCallback(

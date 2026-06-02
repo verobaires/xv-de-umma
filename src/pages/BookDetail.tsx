@@ -62,6 +62,24 @@ export default function BookDetail() {
     })();
   }, [id]);
 
+  useEffect(() => {
+    if (!id) return;
+    const onFocus = async () => {
+      const { data } = await supabase
+        .from("books")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+      if (data) {
+        setBook(data as Book);
+      }
+    };
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [id]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#1A1A2E] text-white flex items-center justify-center">
