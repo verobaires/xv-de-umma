@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, ShoppingCart, Star } from "lucide-react";
 import { toast } from "sonner";
@@ -63,6 +63,20 @@ export default function Home() {
   const updateBookStatus = (bookId: string | number, status: string) => {
     setBooks((prev) => prev.map((b) => (String(b.id) === String(bookId) ? { ...b, status } : b)));
   };
+
+  const fetchCatalog = useCallback(async () => {
+    // Wait for Supabase to finish processing any OAuth hash / restore session
+    // before fetching, so RLS sees the correct auth state.
+    await supabase.auth.getSession();
+    const [cats, bks] = await Promise.all([
+      supabase.from("book_categories").select("*"),
+      supabase.from("books").select("*"),
+    ]);
+    if (!cats.error && cats.data) setCategories(cats.data as Category[]);
+    if (!bks.error && Array.isArray(bks.data)) {
+      setBooks(bks.data as Book[]);
+    }
+  }, []);
 
   const handleConfirmOrder = async (message: string | null): Promise<boolean> => {
     const enabledItems = cart.items.filter((i) => i.enabled === true);
@@ -206,26 +220,18 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      // Wait for Supabase to finish processing any OAuth hash / restore session
-      // before fetching, so RLS sees the correct auth state. This still only
-      // runs once on mount — auth state changes never trigger a re-fetch.
-      await supabase.auth.getSession();
-      const [cats, bks] = await Promise.all([
-        supabase.from("book_categories").select("*"),
-        supabase.from("books").select("*"),
-      ]);
-      if (cancelled) return;
-      if (!cats.error && cats.data) setCategories(cats.data as Category[]);
-      if (!bks.error && Array.isArray(bks.data)) {
-        setBooks(bks.data as Book[]);
-      }
-    })();
-    return () => {
-      cancelled = true;
+    void fetchCatalog();
+  }, [fetchCatalog]);
+
+  useEffect(() => {
+    const onFocus = () => {
+      void fetchCatalog();
     };
-  }, []);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [fetchCatalog]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

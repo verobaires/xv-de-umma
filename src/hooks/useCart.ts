@@ -149,8 +149,8 @@ export function useCart() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const { data } = await supabase.auth.getUser();
-      const uid = data.user?.id ?? null;
+      const { data: { session } } = await supabase.auth.getSession();
+      const uid = session?.user?.id ?? null;
       if (!mounted) return;
       setUserId(uid);
       if (uid) {
@@ -161,6 +161,10 @@ export function useCart() {
       }
     })();
     const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        const syncUid = session?.user?.id;
+        if (syncUid) setUserId(syncUid);
+      }
       const uid = session?.user?.id ?? null;
       setUserId(uid);
       if (uid) {
