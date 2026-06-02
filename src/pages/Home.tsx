@@ -53,6 +53,7 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [loginOpen, setLoginOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const [activeCard, setActiveCard] = useState<string | number | null>(null);
   const [userMeta, setUserMeta] = useState<{ name: string | null; avatar: string | null }>({
     name: null,
     avatar: null,
@@ -250,6 +251,20 @@ export default function Home() {
     history.replaceState({}, "", window.location.pathname);
   }, []);
 
+  useEffect(() => {
+    if (activeCard === null) return;
+    const onPointerDown = (e: MouseEvent) => {
+      const target = e.target;
+      if (!(target instanceof Node)) return;
+      const cardEl = document.querySelector(`[data-book-card="${String(activeCard)}"]`);
+      if (cardEl && !cardEl.contains(target)) {
+        setActiveCard(null);
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [activeCard]);
+
   const filtered = useMemo(() => {
     return books.filter((b) => {
       const matchesCat = selectedCat === "all" || b.category_id === selectedCat;
@@ -261,6 +276,9 @@ export default function Home() {
       return matchesCat && matchesQ;
     });
   }, [books, selectedCat, query]);
+
+  const paidCount = books.filter((b) => b.status === "paid").length;
+  const progressPct = Math.min(100, Math.max(0, (paidCount / 15) * 100));
 
   return (
     <div className="min-h-screen bg-[#1A1A2E] text-white">
@@ -375,6 +393,23 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="w-full bg-[#1A1A2E]">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-white/50">Regalos confirmados</span>
+            <span className="text-xs font-bold text-[#B8860B]">
+              {paidCount} de 15
+            </span>
+          </div>
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10">
+            <div
+              className="h-full min-w-0 max-w-full rounded-full bg-[#B8860B] transition-all duration-500"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        </div>
+      </section>
+
       {/* CATALOG */}
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
         <h2
@@ -398,6 +433,8 @@ export default function Home() {
               return (
                 <article
                   key={book.id}
+                  data-book-card={book.id}
+                  onClick={() => setActiveCard(book.id)}
                   className={`group relative overflow-hidden rounded-xl border border-white/5 bg-[#22223a] transition-all ${
                     isReserved ? "opacity-60" : ""
                   }`}
@@ -431,9 +468,14 @@ export default function Home() {
                     )}
 
                     {!isReserved && !isPaid && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                      <div
+                        className={`absolute inset-0 flex items-center justify-center bg-black/40 transition-opacity group-hover:opacity-100 ${
+                          String(activeCard) === String(book.id) ? "opacity-100" : "opacity-0"
+                        }`}
+                      >
                         <button
-                          onClick={async () => {
+                          onClick={async (e) => {
+                            e.stopPropagation();
                             if (!cart.userId) {
                               localStorage.setItem(
                                 "pendingItem",
@@ -455,6 +497,7 @@ export default function Home() {
                               toast.success("Añadido al carrito");
                               setCartOpen(true);
                             }
+                            setActiveCard(null);
                           }}
                           className="inline-flex items-center gap-2 rounded-full bg-[#8B0000] px-5 py-2 text-xs font-semibold uppercase tracking-wider text-white hover:bg-[#a00000] transition-colors"
                         >
@@ -473,7 +516,7 @@ export default function Home() {
                       {book.title}
                     </h3>
                     {book.author && (
-                      <p className="mt-1 text-xs italic text-white/50">
+                      <p className="text-xs italic text-white/50 mt-0.5">
                         {book.author}
                       </p>
                     )}
